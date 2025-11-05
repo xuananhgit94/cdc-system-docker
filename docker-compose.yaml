@@ -17,7 +17,7 @@ services:
     image: xuananhdocker/api
     container_name: api
     env_file:
-      - ../api/.api.env
+      - .env/.api.env
     ports:
       - "3000:8080"
     networks:
@@ -29,7 +29,7 @@ services:
     image: xuananhdocker/crawler
     container_name: crawler
     env_file:
-      - ../crawler/.crawler.env
+      - .env/.crawler.env
     networks:
       - cdc-stream
 #    depends_on:
@@ -41,7 +41,7 @@ services:
     image: xuananhdocker/consumer
     container_name: consumer
     env_file:
-      - ../consumer/.consumer.env
+      - .env/.consumer.env
     networks:
       - cdc-stream
     restart: on-failure
