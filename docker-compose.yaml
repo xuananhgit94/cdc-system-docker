@@ -1,0 +1,53 @@
+version: '3.8'
+services:
+  website:
+    image: xuananhdocker/website
+#    build:
+#      context: ../website
+#      dockerfile: Dockerfile
+    container_name: website
+    ports:
+      - "3100:80"
+    networks:
+      - cdc-stream
+  api:
+#    build:
+#      context: ../api
+#      dockerfile: Dockerfile
+    image: xuananhdocker/api
+    container_name: api
+    env_file:
+      - ../api/.api.env
+    ports:
+      - "3000:8080"
+    networks:
+      - cdc-stream
+  crawler:
+#    build:
+#      context: ../crawler
+#      dockerfile: Dockerfile
+    image: xuananhdocker/crawler
+    container_name: crawler
+    env_file:
+      - ../crawler/.crawler.env
+    networks:
+      - cdc-stream
+#    depends_on:
+#      - redis
+  consumer:
+#    build:
+#      context: ../consumer
+#      dockerfile: Dockerfile
+    image: xuananhdocker/consumer
+    container_name: consumer
+    env_file:
+      - ../consumer/.consumer.env
+    networks:
+      - cdc-stream
+    restart: on-failure
+#    depends_on:
+#      - redis
+#      - postgres
+networks:
+  cdc-stream:
+    external: true
