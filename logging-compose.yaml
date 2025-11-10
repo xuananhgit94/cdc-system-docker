@@ -1,0 +1,52 @@
+version: "3.8"
+
+services:
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: loki
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./configs/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    ports:
+      - "3300:3100"
+    restart: unless-stopped
+    networks:
+      - logging
+
+  grafana:
+    image: grafana/grafana:9.5.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./configs/grafana/provisioning/datasources/loki.yaml:/etc/grafana/provisioning/datasources/loki.yaml:ro
+    ports:
+      - "3200:3000"
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - logging
+
+  fluent-bit:
+    image: fluent/fluent-bit:3.1.7
+    container_name: fluent-bit
+    volumes:
+      - ./configs/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./configs/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+    ports:
+      - "24224:24224"
+    depends_on:
+      - loki
+    restart: unless-stopped
+    networks:
+      - logging
+volumes:
+  loki_data:
+  grafana_data:
+networks:
+  logging:
+    external: true

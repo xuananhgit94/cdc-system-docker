@@ -8,6 +8,11 @@ services:
     container_name: website
     ports:
       - "3100:80"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: "website"
     networks:
       - cdc-stream
   api:
@@ -18,6 +23,11 @@ services:
     container_name: api
     env_file:
       - .env/.api.env
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: "api"
     ports:
       - "3000:8080"
     networks:
@@ -30,6 +40,11 @@ services:
     container_name: crawler
     env_file:
       - .env/.crawler.env
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: "crawler"
     networks:
       - cdc-stream
 #    depends_on:
@@ -42,6 +57,11 @@ services:
     container_name: consumer
     env_file:
       - .env/.consumer.env
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: "host.docker.internal:24224"
+        tag: "consumer"
     networks:
       - cdc-stream
     restart: on-failure

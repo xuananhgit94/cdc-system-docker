@@ -1,3 +1,4 @@
 .postgres
 .kafka-data
 .elasticsearch-data
+postgres
