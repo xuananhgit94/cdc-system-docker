@@ -34,6 +34,7 @@ services:
   fluent-bit:
     image: fluent/fluent-bit:3.1.7
     container_name: fluent-bit
+    network_mode: "host"
     volumes:
       - ./configs/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./configs/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
@@ -42,8 +43,6 @@ services:
     depends_on:
       - loki
     restart: unless-stopped
-    networks:
-      - cdc-stream
 volumes:
   loki_data:
   grafana_data:
