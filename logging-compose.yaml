@@ -12,7 +12,7 @@ services:
       - "3300:3100"
     restart: unless-stopped
     networks:
-      - logging
+      - cdc-stream
 
   grafana:
     image: grafana/grafana:9.5.0
@@ -29,7 +29,7 @@ services:
       - loki
     restart: unless-stopped
     networks:
-      - logging
+      - cdc-stream
 
   fluent-bit:
     image: fluent/fluent-bit:3.1.7
@@ -43,10 +43,10 @@ services:
       - loki
     restart: unless-stopped
     networks:
-      - logging
+      - cdc-stream
 volumes:
   loki_data:
   grafana_data:
 networks:
-  logging:
+  cdc-stream:
     external: true
