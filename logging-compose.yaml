@@ -38,6 +38,7 @@ services:
   loki:
     image: grafana/loki:3.5
     container_name: loki
+    user: root
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
       - ./configs/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
