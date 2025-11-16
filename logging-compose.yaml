@@ -1,25 +1,69 @@
-version: "3.8"
-
 services:
+  minio-init:
+    image: minio/mc:latest
+    container_name: minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set minio_alias http://minio:9000 minioadmin minioadmin123;
+      /usr/bin/mc mb minio_alias/loki-chunks || true;
+      /usr/bin/mc mb minio_alias/loki-rules || true;
+      exit 0;
+      "
+    networks:
+      - cdc-stream
+  minio:
+    image: minio/minio:RELEASE.2025-07-23T15-54-02Z
+    container_name: minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    command: server /data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - cdc-stream
   loki:
-    image: grafana/loki:2.9.2
+    image: grafana/loki:3.5
     container_name: loki
     command: -config.file=/etc/loki/loki-config.yaml
     volumes:
       - ./configs/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
       - loki_data:/loki
+    environment:
+      - MINIO_ACCESS_KEY_ID=minioadmin
+      - MINIO_SECRET_ACCESS_KEY=minioadmin123
     ports:
       - "3300:3100"
     restart: unless-stopped
+    depends_on:
+      - minio
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3100/ready" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
     networks:
       - cdc-stream
-
   grafana:
     image: grafana/grafana:9.5.0
     container_name: grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-      - GF_USERS_ALLOW_SIGN_UP=false
+      GF_SECURITY_ADMIN_PASSWORD: CHANGE_ME
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_PROVISIONING_PATH: /etc/grafana/provisioning
     volumes:
       - grafana_data:/var/lib/grafana
       - ./configs/grafana/provisioning/datasources/loki.yaml:/etc/grafana/provisioning/datasources/loki.yaml:ro
@@ -27,25 +71,65 @@ services:
       - "3200:3000"
     depends_on:
       - loki
-    restart: unless-stopped
+    restart: always
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:3000/api/health" ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
     networks:
       - cdc-stream
-
   fluent-bit:
-    image: fluent/fluent-bit:3.1.7
+    image: fluent/fluent-bit:4.2.0
     container_name: fluent-bit
-    network_mode: "host"
     volumes:
       - ./configs/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
       - ./configs/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - ./configs/fluent-bit/lua_add_labels.lua:/fluent-bit/etc/lua_add_labels.lua:ro
+      - ./configs/fluent-bit/storage:/var/fluent-bit/storage
     ports:
       - "24224:24224"
+      - "24224:24224/udp"
+      - "2020:2020"
+    environment:
+      - FLB_LOG_LEVEL=info
     depends_on:
       - loki
-    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://localhost:2020/api/v1/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1024M
+    restart: always
+    networks:
+      - cdc-stream
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - fluent-bit
+      - loki
+    networks:
+      - cdc-stream
 volumes:
+  minio_data:
+    driver: local
   loki_data:
+    driver: local
   grafana_data:
+    driver: local
+  fluent-bit-storage:
+    driver: local
 networks:
   cdc-stream:
     external: true
