@@ -67,10 +67,11 @@ services:
       GF_PROVISIONING_PATH: /etc/grafana/provisioning
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./configs/grafana/provisioning/datasources/loki.yaml:/etc/grafana/provisioning/datasources/loki.yaml:ro
+      - ./configs/grafana/provisioning/datasources/grafana-config.yaml:/etc/grafana/provisioning/datasources/grafana-config.yaml:ro
     ports:
       - "3200:3000"
     depends_on:
+      - prometheus
       - loki
     restart: always
     healthcheck:
@@ -115,6 +116,11 @@ services:
     restart: always
     volumes:
       - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
     ports:
       - "9090:9090"
     depends_on:
@@ -130,6 +136,8 @@ volumes:
   grafana_data:
     driver: local
   fluent-bit-storage:
+    driver: local
+  prometheus_data:
     driver: local
 networks:
   cdc-stream:

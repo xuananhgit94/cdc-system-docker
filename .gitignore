@@ -2,3 +2,4 @@
 .kafka-data
 .elasticsearch-data
 postgres
+configs/fluent-bit/storage
